@@ -1,128 +1,87 @@
----
-title: Reference
-hideTOC: true
----
+// App.js // Full Expo React Native single-file MVP for "CarpenterConnect" (Hindi/English + easy UI + demo OTP + AsyncStorage) // Ready to paste into an Expo project (expo init) as App.js
 
-import { BookOpen02Icon } from '@expo/styleguide-icons/outline/BookOpen02Icon';
+import React, { useEffect, useState } from 'react'; import { SafeAreaView, View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, Linking, Platform } from 'react-native'; import AsyncStorage from '@react-native-async-storage/async-storage'; import * as Speech from 'expo-speech';
 
-import { BoxLink } from '~/ui/components/BoxLink';
-import { Collapsible } from '~/ui/components/Collapsible';
-import RedirectNotification from '~/ui/components/RedirectNotification';
-import {
-  AndroidIOSCompatibilityTable,
-  ReactNativeCompatibilityTable,
-} from '~/ui/components/SDKTables';
-import { Terminal } from '~/ui/components/Snippet';
-import { CODE } from '~/ui/components/Text';
+// ---------- TRANSLATIONS (simple inline i18n) ---------- const STRINGS = { hi: { appName: 'कारपेंटर कनेक्ट', welcome: 'स्वागत है', chooseRole: 'अपना रोल चुनें', customer: 'ग्राहक', carpenter: 'बढ़ई', startReg: 'रजिस्ट्रेशन शुरू करें', seeList: 'लिस्ट देखें', enterPhone: 'फोन नंबर डालें', nameOptional: 'नाम (ऐच्छिक)', sendOtp: 'OTP भेजें (डेमो)', enterOtp: 'OTP दर्ज करें', verify: 'सत्यापित करें', call: 'कॉल करें', noCarpenters: 'कोई बढ़ई उपलब्ध नहीं', back: 'पीछे जाएँ', langSwitch: 'भाषा बदलें', demoOtpMsg: 'यह एक डेमो OTP है: ', registered: 'रजिस्ट्रेशन पूरा', wrongOtp: 'गलत OTP', invalidPhone: 'सही फोन नंबर डालें', help: 'मदद के लिए कॉल करें' }, en: { appName: 'Carpenter Connect', welcome: 'Welcome', chooseRole: 'Choose your role', customer: 'Customer', carpenter: 'Carpenter', startReg: 'Start Registration', seeList: 'See List', enterPhone: 'Enter phone number', nameOptional: 'Name (optional)', sendOtp: 'Send OTP (demo)', enterOtp: 'Enter OTP', verify: 'Verify', call: 'Call', noCarpenters: 'No carpenters available', back: 'Back', langSwitch: 'Switch Language', demoOtpMsg: 'This is a demo OTP: ', registered: 'Registration complete', wrongOtp: 'Wrong OTP', invalidPhone: 'Please enter a valid phone', help: 'Call for help' } };
 
-<RedirectNotification>
-  The page you are looking for does not exist in this SDK version. It may have been deprecated or
-  added to a newer SDK version.
-</RedirectNotification>
+// ---------- Helper functions ---------- const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-The Expo SDK provides access to device and system functionality such as contacts, camera, gyroscope, GPS location, and so on, in the form of packages. You can install any Expo SDK package using the `npx expo install` command. For example, three different packages are installed using the following command:
+const STORAGE_KEY = '@carpenter_connect_carpenters_v1';
 
-<Terminal cmd={['$ npx expo install expo-camera expo-contacts expo-sensors']} />
+// ---------- App Component ---------- export default function App() { const [lang, setLang] = useState('hi'); // default Hindi const strings = STRINGS[lang];
 
-After installing one or more packages, you can import them into your JavaScript code:
+const [screen, setScreen] = useState('home'); // home | register | verify | list const [role, setRole] = useState('customer'); const [name, setName] = useState(''); const [phone, setPhone] = useState(''); const [otpSent, setOtpSent] = useState(null); const [otpInput, setOtpInput] = useState(''); const [carpenters, setCarpenters] = useState([]);
 
-```js
-import { CameraView } from 'expo-camera';
-import * as Contacts from 'expo-contacts';
-import { Gyroscope } from 'expo-sensors';
-```
+useEffect(() => { loadCarpenters(); }, []);
 
-This allows you to write [`Contacts.getContactsAsync()`](./sdk/contacts#contactsgetcontactsasynccontactquery) and read the contacts from the device, read the gyroscope sensor to detect device movement, or start the phone's camera and take photos.
+useEffect(() => { // speak welcome on home if (screen === 'home') { speak(${strings.welcome}. ${strings.chooseRole}); } }, [screen, lang]);
 
-## All Expo SDK packages work in any React Native app
+const speak = (text) => { try { Speech.speak(text, { language: lang === 'hi' ? 'hi-IN' : 'en-US' }); } catch (e) { } };
 
-Expo apps are React Native apps, so all Expo SDK packages work in any React Native app with the `expo` package installed and configured. The easiest way to create a React Native app with support for Expo SDK packages is to use `create-expo-app`. However, you can also add Expo SDK support to an existing React Native app with the `npx install-expo-modules` command.
+const loadCarpenters = async () => { try { const json = await AsyncStorage.getItem(STORAGE_KEY); if (json) setCarpenters(JSON.parse(json)); } catch (e) { console.log('load err', e); } };
 
-<Terminal
-  cmd={['# Create a project named my-app', '$ npx create-expo-app my-app --template bare-minimum']}
-  cmdCopy="npx create-expo-app my-app --template bare-minimum"
-/>
+const saveCarpenters = async (arr) => { try { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch (e) { console.log('save err', e); } };
 
-<BoxLink
-  title="Install Expo SDK packages in existing React Native apps"
-  href="/bare/installing-expo-modules"
-  description={
-    <>
-      Learn more about configuring projects created with{' '}
-      <CODE>npx @react-native-community/cli@latest init</CODE> to Expo SDK packages.
-    </>
-  }
-  Icon={BookOpen02Icon}
-/>
+const startRegister = () => { // simple validation for phone const p = phone.replace(/\s+/g, ''); if (!/^[6-9]\d{9}$/.test(p)) { Alert.alert(strings.invalidPhone); speak(strings.invalidPhone); return; } const otp = generateOTP(); setOtpSent(otp); // Demo: show otp in alert AND speak it Alert.alert(strings.demoOtpMsg + otp); speak(strings.demoOtpMsg + otp); setScreen('verify'); };
 
-<BoxLink
-  title="Use libraries"
-  description="Learn how to install Expo SDK packages in your project."
-  href="/workflow/using-libraries"
-  Icon={BookOpen02Icon}
-/>
+const verifyOtpAndSave = async () => { if (otpInput.trim() === otpSent) { if (role === 'carpenter') { const newCarp = { id: Date.now().toString(), name: name || (lang === 'hi' ? 'अज्ञात' : 'Unknown'), phone: phone, skills: lang === 'hi' ? 'सामान्य' : 'General', city: lang === 'hi' ? 'नहीं बताया' : 'Not set' }; const updated = [newCarp, ...carpenters]; setCarpenters(updated); await saveCarpenters(updated); Alert.alert(strings.registered); speak(strings.registered); } else { Alert.alert(strings.registered); speak(strings.registered); } // reset and go to list so customer can call setName(''); setPhone(''); setOtpInput(''); setOtpSent(null); setScreen('list'); } else { Alert.alert(strings.wrongOtp); speak(strings.wrongOtp); } };
 
-## Using pre-release versions
+const callNumber = (num) => { const url = tel:${num}; Linking.canOpenURL(url).then((supported) => { if (supported) Linking.openURL(url); else Alert.alert('Error', 'Cannot open phone app'); }); };
 
-New Expo SDK versions are released three times each year. Between these releases, we publish pre-release versions of the `expo` package and all of the Expo SDK packages. Pre-releases are not considered stable and should only be used if you are comfortable with the risk of encountering bugs or other issues.
+const renderHome = () => ( <View style={styles.card}> <Text style={styles.title}>{strings.appName}</Text> <Text style={styles.subtitle}>{strings.chooseRole}</Text>
 
-### Canary releases
+<View style={{flexDirection: 'row', justifyContent: 'space-between', marginVertical: 12}}>
+    <TouchableOpacity onPress={() => { setRole('customer'); speak(strings.customer); }} style={[styles.roleBtn, role === 'customer' && styles.roleBtnActive]}>
+      <Text style={styles.roleText}>👤 {strings.customer}</Text>
+    </TouchableOpacity>
 
-Canary releases represent a snapshot of the state of the `main` branch at the time they are published. Canary package versions include `-canary` in the name, along with the date and commit hash, such as `53.0.0-canary-20240418-8d74597`. To install the latest canary release:
+    <TouchableOpacity onPress={() => { setRole('carpenter'); speak(strings.carpenter); }} style={[styles.roleBtn, role === 'carpenter' && styles.roleBtnActive]}>
+      <Text style={styles.roleText}>🔨 {strings.carpenter}</Text>
+    </TouchableOpacity>
+  </View>
 
-<Terminal
-  cmd={[
-    '# Install the alpha version of expo and its related packages',
-    '$ npm install expo@canary && npx expo install --fix',
-  ]}
-  cmdCopy="npm install expo@canary && npx expo install --fix"
-/>
+  <TouchableOpacity onPress={() => setScreen('register')} style={styles.primaryBtn}><Text style={styles.primaryBtnText}>{strings.startReg}</Text></TouchableOpacity>
+  <TouchableOpacity onPress={() => setScreen('list')} style={styles.ghostBtn}><Text>{strings.seeList}</Text></TouchableOpacity>
 
-You can often use pre-release versions of individual packages with stable releases of the Expo SDK. There may occasionally be incompatibilities or other issues that arise in canary-quality releases. You may want to [silence dependency validation warnings](/more/expo-cli/#configuring-dependency-validation) if you opt in to the canary package and once you have verified that it works well for your use cases.
+  <View style={{flexDirection:'row', justifyContent:'space-between', marginTop:20}}>
+    <TouchableOpacity onPress={() => { setLang(prev => prev === 'hi' ? 'en' : 'hi'); speak(lang === 'hi' ? 'Language switched to English' : 'भाषा बदल दी गई'); }} style={styles.smallBtn}>
+      <Text>{strings.langSwitch}</Text>
+    </TouchableOpacity>
 
-### Beta releases
+    <TouchableOpacity onPress={() => { Alert.alert(strings.help, '9876543210'); }} style={styles.smallBtn}><Text>{strings.help}</Text></TouchableOpacity>
+  </View>
+</View>
 
-Before each Expo SDK release, we publish beta versions of the `expo` package and all of the Expo SDK packages. Beta releases are considered much more stable than canary releases, and we encourage developers to try them out on their apps and share their feedback. Beta releases use the `beta` tag on npm and follow the instructions in the related [changelog](https://expo.dev/changelog) post.
+);
 
-## Each Expo SDK version depends on a React Native version
+const renderRegister = () => ( <View style={styles.card}> <Text style={styles.h2}>{role === 'carpenter' ? strings.carpenter : strings.customer} - {strings.startReg}</Text> {role === 'carpenter' && <TextInput placeholder={strings.nameOptional} value={name} onChangeText={setName} style={styles.input} />} <TextInput placeholder={strings.enterPhone} keyboardType='phone-pad' value={phone} onChangeText={setPhone} style={styles.input} /> <TouchableOpacity onPress={startRegister} style={styles.primaryBtn}><Text style={styles.primaryBtnText}>{strings.sendOtp}</Text></TouchableOpacity> <TouchableOpacity onPress={() => setScreen('home')} style={styles.linkBtn}><Text>{strings.back}</Text></TouchableOpacity> </View> );
 
-<ReactNativeCompatibilityTable />
+const renderVerify = () => ( <View style={styles.card}> <Text style={styles.h2}>{strings.enterOtp} - {phone}</Text> <TextInput placeholder={strings.enterOtp} keyboardType='number-pad' value={otpInput} onChangeText={setOtpInput} style={styles.input} /> <TouchableOpacity onPress={verifyOtpAndSave} style={styles.primaryBtn}><Text style={styles.primaryBtnText}>{strings.verify}</Text></TouchableOpacity> <TouchableOpacity onPress={() => { setScreen('register'); setOtpSent(null); }} style={styles.linkBtn}><Text>{strings.back}</Text></TouchableOpacity> </View> );
 
-### Additional information
+const renderList = () => ( <View style={styles.card}> <Text style={styles.h2}>{strings.seeList}</Text> {carpenters.length === 0 ? <Text style={{marginTop:12}}>{strings.noCarpenters}</Text> : <FlatList data={carpenters} keyExtractor={(i)=>i.id} renderItem={({item}) => ( <View style={styles.row}> <View style={{flex:1}}> <Text style={{fontWeight:'700', fontSize:16}}>{item.name}</Text> <Text>{item.skills} • {item.city}</Text> </View> <TouchableOpacity onPress={() => callNumber(item.phone)} style={styles.callBtn}><Text style={{color:'#fff'}}>{strings.call}</Text></TouchableOpacity> </View> )} /> } <TouchableOpacity onPress={() => setScreen('home')} style={styles.linkBtn}><Text>{strings.back}</Text></TouchableOpacity> </View> );
 
-<Collapsible summary="Expo SDK policy for tracking React Native releases">
+return ( <SafeAreaView style={styles.container}> {screen === 'home' && renderHome()} {screen === 'register' && renderRegister()} {screen === 'verify' && renderVerify()} {screen === 'list' && renderList()} </SafeAreaView> ); }
 
-- Expo SDK versions are released three times each year, and each Expo SDK release targets a single React Native version. This is typically the latest stable version at the time of the release.
-- The release cadence of React Native has varied over its history and it is currently on pace for six releases in 2025. While on this cadence, you can expect that there will be an Expo SDK version for every second React Native release.
-- Pre-release versions of the upcoming Expo SDK will include support for the latest version of React Native quickly, usually the same day it is released. A member of the Expo SDK team works on the React Native releases team for each release, and is responsible for continuously updating the React Native version in the Expo repository, verifying compatibility, and reporting regressions back to the team at Meta.
+const styles = StyleSheet.create({ container: {flex:1, backgroundColor:'#f3f4f6', padding:12}, card: {backgroundColor:'#fff', padding:16, borderRadius:12, marginTop:16, minHeight:200, elevation:2}, title: {fontSize:22, fontWeight:'800', textAlign:'center'}, subtitle: {textAlign:'center', marginTop:6, color:'#555'}, roleBtn: {padding:14, borderRadius:10, borderWidth:1, borderColor:'#eee', width:'48%', alignItems:'center'}, roleBtnActive: {backgroundColor:'#e6f9f0'}, roleText: {fontSize:16, fontWeight:'700'}, primaryBtn: {backgroundColor:'#1f7a68', padding:14, borderRadius:10, marginTop:12, alignItems:'center'}, primaryBtnText: {color:'#fff', fontWeight:'800', fontSize:16}, ghostBtn: {padding:12, marginTop:8, alignItems:'center'}, smallBtn: {padding:8, borderRadius:8, borderWidth:1, borderColor:'#ddd', backgroundColor:'#fff'}, input: {borderWidth:1, borderColor:'#eaeaea', borderRadius:10, padding:12, marginVertical:8, backgroundColor:'#fff'}, h2: {fontSize:18, fontWeight:'700', marginBottom:8}, linkBtn: {marginTop:10, alignItems:'center'}, row: {flexDirection:'row', alignItems:'center', paddingVertical:10, borderBottomWidth:1, borderColor:'#f0f0f0'}, callBtn: {backgroundColor:'#e64a19', paddingHorizontal:12, paddingVertical:8, borderRadius:8} });
 
-</Collapsible>
+/* ------------------ NOTES ------------------
 
-<Collapsible summary=" Why not release a new Expo SDK version immediately for every React Native release?">
+This is an MVP single-file app (App.js). To use:
 
-At Expo, we have found that releasing three major version provides a good balance of stability and innovation for developers depending on our open source tools. Expo and Meta work closely together on releases, and we will keep improving our processes to get the latest Expo and React Native features to you as quickly as possible.
+1. expo init myapp
 
-</Collapsible>
 
-<Collapsible summary="What if I need a change from the latest React Native version and it's not yet in an Expo SDK release?"
->
-We work closely with the team at Meta to ensure that any urgent fixes are included in the React Native version used by the latest Expo SDK. If your issue won't be cherrypicked into an existing release because it is more niche, or it involves a breaking change, then you have two options:
+2. npm install @react-native-async-storage/async-storage expo-speech
 
-1. Use [`patch-package`](https://github.com/ds300/patch-package) to pull in the fix.
-2. Use a [pre-release version of the Expo SDK](#using-pre-release-versions). An ([example](https://expo.dev/changelog/react-native-78)).
 
-</Collapsible>
+3. replace App.js with this file and run expo start
 
-<Collapsible summary="Can I use an older version of React Native with the latest Expo SDK?">
 
-Packages in the Expo SDK are intended to support the target React Native version for that SDK. Typically, they will not support older versions of React Native, but they may. When a new version of React Native is released, the latest versions of the Expo SDK packages are typically updated to support it. However, this may take weeks or more, depending on the extent of the changes in the release.
 
-</Collapsible>
+OTP here is a demo (shown in alert + spoken). For production, integrate Firebase Authentication (Phone Auth) or Twilio SMS via a backend.
 
-## Support for Android and iOS versions
+To save carpenters across devices globally, integrate Firebase Firestore (replace AsyncStorage save/load with Firestore CRUD).
 
-Each version of Expo SDK supports a minimum OS version of Android and iOS. For Android, the `compileSdkVersion` is defined which tells the [Gradle](https://developer.android.com/studio/build) which Android SDK version to use to compile the app. This also means that you can use the Android API features included in that SDK version and from the previous versions. For iOS, the [Xcode](https://developer.apple.com/news/upcoming-requirements/) tells the minimum Xcode SDK version to use to compile the app.
+You can expand translations by adding new language keys to STRINGS.
 
-<AndroidIOSCompatibilityTable startVersion="53.0.0" endVersion="51.0.0" />
-
-When deciding whether to upgrade your Expo SDK version, consider both Expo's SDK version and app store submission requirements, as described in the above table. Google Play Store and Apple App Store periodically increase their minimum required OS versions and API levels, which are required for new app submissions. Expo has no control over the app store requirements, and you should check [Google](https://developer.android.com/studio/build) and [Apple](https://developer.apple.com/news/upcoming-requirements/) for the current store submission requirements.
+I intentionally used large buttons, icons (emoji) and speech support so even low-literacy users can use the app. */
